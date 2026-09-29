@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>SUMO Controller</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0b0d10;
+  --panel: #14181d;
+  --panel2: #1b2027;
+  --text: #f4f6f8;
+  --muted: #929ba6;
+  --accent: #57d68d;
+  --danger: #ff5c67;
+  --border: #2a3139;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; }
+body { display: grid; place-items: center; padding: 20px; }
+.app { width: min(760px, 100%); }
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+h1 { margin: 0; font-size: 24px; }
+.status { display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 13px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--danger); }
+.dot.ok { background: var(--accent); }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 20px; padding: 18px; }
+.settings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+label { color: var(--muted); font-size: 12px; }
+input { width: 100%; margin-top: 6px; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel2); color: var(--text); outline: none; }
+button { border: 0; border-radius: 11px; padding: 11px 14px; background: var(--accent); color: #07130d; font-weight: 700; cursor: pointer; }
+button.stop { background: var(--danger); color: white; width: 100%; margin-top: 14px; }
+.joystick-wrap { display: grid; place-items: center; padding: 12px 0 6px; }
+.joystick {
+  width: min(72vw, 360px); aspect-ratio: 1; border-radius: 50%;
+  position: relative; touch-action: none; user-select: none;
+  background:
+    radial-gradient(circle at center, transparent 0 24%, rgba(255,255,255,.035) 24.5% 25%, transparent 25.5% 49%, rgba(255,255,255,.035) 49.5% 50%, transparent 50.5%),
+    #101419;
+  border: 1px solid var(--border);
+  box-shadow: inset 0 0 50px rgba(0,0,0,.35);
+}
+.knob {
+  width: 31%; aspect-ratio: 1; position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%,-50%); border-radius: 50%;
+  background: #eef2f5; box-shadow: 0 8px 28px rgba(0,0,0,.45);
+  transition: transform .05s linear;
+}
+.readout { text-align: center; margin-top: 14px; }
+.command { font: 700 26px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.values { color: var(--muted); font: 13px ui-monospace, monospace; margin-top: 4px; }
+.note { margin-top: 15px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+@media (max-width: 560px) {
+  .settings { grid-template-columns: 1fr; }
+  body { padding: 12px; }
+}
+</style>
+</head>
+<body>
+<main class="app">
+<header>
+  <h1>SUMO Controller</h1>
+  <div class="status"><span id="dot" class="dot"></span><span id="status">Disconnected</span></div>
+</header>
+
+<section class="panel">
+  <div class="settings">
+    <div>
+      <label>EMQX WebSocket</label>
+      <input id="broker" value="wss://broker.emqx.io:8084/mqtt">
+    </div>
+    <div>
+      <label>MQTT Topic</label>
+      <input id="topic" value="robot/sumo/ikhwan_2026">
+    </div>
+  </div>
+
+  <button id="connect">Connect</button>
+
+  <div class="joystick-wrap">
+    <div id="joystick" class="joystick">
+      <div id="knob" class="knob"></div>
+    </div>
+    <div class="readout">
+      <div id="command" class="command">S</div>
+      <div id="values" class="values">X: 0 &nbsp; Y: 0</div>
+    </div>
+  </div>
+
+  <button id="stop" class="stop">STOP</button>
+  <div class="note">
+    Geser joystick untuk mengontrol robot. Tengah = stop, atas = maju,
+    bawah = mundur, kiri/kanan = putar. Nilai dikirim sebagai X,Y dari -255 sampai 255.
+  </div>
+</section>
+</main>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script>
+const joystick = document.getElementById("joystick");
+const knob = document.getElementById("knob");
+const commandEl = document.getElementById("command");
+const valuesEl = document.getElementById("values");
+const statusEl = document.getElementById("status");
+const dot = document.getElementById("dot");
+const connectBtn = document.getElementById("connect");
+const stopBtn = document.getElementById("stop");
+
+let client = null;
+let active = false;
+let lastSent = 0;
+let lastPayload = "";
+
+const SEND_INTERVAL = 35;
+
+function setStatus(ok, text) {
+  dot.classList.toggle("ok", ok);
+  statusEl.textContent = text;
+}
+
+function connectMQTT() {
+  if (typeof mqtt === "undefined") {
+    setStatus(false, "mqtt.js gagal dimuat");
+    return;
+  }
+
+  if (client) client.end(true);
+
+  const url = document.getElementById("broker").value.trim();
+  client = mqtt.connect(url, {
+    clientId: "sumo_web_" + Math.random().toString(16).slice(2),
+    clean: true,
+    connectTimeout: 5000,
+    reconnectPeriod: 2000
+  });
+
+  setStatus(false, "Connecting...");
+
+  client.on("connect", () => {
+    setStatus(true, "Connected");
+  });
+
+  client.on("reconnect", () => setStatus(false, "Reconnecting..."));
+  client.on("offline", () => setStatus(false, "Offline"));
+  client.on("error", err => setStatus(false, "MQTT error"));
+}
+
+function publish(x, y, force=false) {
+  if (!client || !client.connected) return;
+
+  x = Math.max(-255, Math.min(255, Math.round(x)));
+  y = Math.max(-255, Math.min(255, Math.round(y)));
+
+  const payload = `${x},${y}`;
+  const now = performance.now();
+
+  if (!force && payload === lastPayload && now - lastSent < SEND_INTERVAL) return;
+  if (!force && now - lastSent < SEND_INTERVAL) return;
+
+  client.publish(
+    document.getElementById("topic").value.trim(),
+    payload,
+    { qos: 0, retain: false }
+  );
+
+  lastPayload = payload;
+  lastSent = now;
+
+  updateReadout(x, y);
+}
+
+function updateReadout(x, y) {
+  const ax = Math.abs(x), ay = Math.abs(y);
+  let c = "S";
+
+  if (ay < 8 && ax < 8) c = "S";
+  else if (y >= 0 && x > 8) c = "FR";
+  else if (y >= 0 && x < -8) c = "FL";
+  else if (y < 0 && x > 8) c = "BR";
+  else if (y < 0 && x < -8) c = "BL";
+  else if (y >= 0) c = "F";
+  else if (y < 0) c = "B";
+  else if (x > 0) c = "R";
+  else c = "L";
+
+  const intensity = Math.round(Math.min(255, Math.hypot(x, y)));
+  commandEl.textContent = c + intensity;
+  valuesEl.textContent = `X: ${x}   Y: ${y}`;
+}
+
+function resetJoystick() {
+  knob.style.transform = "translate(-50%, -50%)";
+  active = false;
+  publish(0, 0, true);
+  updateReadout(0, 0);
+}
+
+function moveJoystick(clientX, clientY) {
+  const r = joystick.getBoundingClientRect();
+  const cx = r.left + r.width / 2;
+  const cy = r.top + r.height / 2;
+
+  let dx = clientX - cx;
+  let dy = cy - clientY;
+
+  const max = r.width / 2;
+  const dist = Math.hypot(dx, dy);
+
+  if (dist > max) {
+    dx = dx / dist * max;
+    dy = dy / dist * max;
+  }
+
+  knob.style.transform =
+    `translate(calc(-50% + ${dx}px), calc(-50% - ${dy}px))`;
+
+  const x = Math.round((dx / max) * 255);
+  const y = Math.round((dy / max) * 255);
+
+  publish(x, y);
+}
+
+joystick.addEventListener("pointerdown", e => {
+  active = true;
+  joystick.setPointerCapture(e.pointerId);
+  moveJoystick(e.clientX, e.clientY);
+});
+
+joystick.addEventListener("pointermove", e => {
+  if (active) moveJoystick(e.clientX, e.clientY);
+});
+
+joystick.addEventListener("pointerup", resetJoystick);
+joystick.addEventListener("pointercancel", resetJoystick);
+
+stopBtn.addEventListener("click", resetJoystick);
+connectBtn.addEventListener("click", connectMQTT);
+
+updateReadout(0, 0);
+</script>
+</body>
+</html>
