@@ -1,13 +1,12 @@
+
 <!doctype html>
 <html lang="id">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-
 <title>SUMO Controller</title>
 
 <style>
-
 :root {
   color-scheme: dark;
   --bg: #0b0d10;
@@ -19,978 +18,441 @@
   --danger: #ff5c67;
   --border: #2a3139;
 }
-
-* {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; min-height: 100%; background: var(--bg);
+  color: var(--text); font-family: Inter, system-ui, sans-serif;
 }
-
-html,
-body {
-  margin: 0;
-  min-height: 100%;
-  background: var(--bg);
-  color: var(--text);
-  font-family: Inter, system-ui, sans-serif;
-}
-
-body {
-  display: grid;
-  place-items: center;
-  padding: 20px;
-}
-
-.app {
-  width: min(760px, 100%);
-}
-
+body { display: grid; place-items: center; padding: 16px; }
+.app { width: min(760px, 100%); }
 header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 18px;
+  display: flex; justify-content: space-between;
+  align-items: center; gap: 10px; margin-bottom: 18px;
 }
-
-h1 {
-  margin: 0;
-  font-size: 24px;
-}
-
-.status {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--danger);
-}
-
-.dot.ok {
-  background: var(--accent);
-}
-
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 18px;
-}
-
-.settings {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-label {
-  color: var(--muted);
-  font-size: 12px;
-}
-
+h1 { margin: 0; font-size: 24px; }
+.status { display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 13px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--danger); flex-shrink: 0; }
+.dot.ok { background: var(--accent); }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 20px; padding: 18px; }
+.settings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+label { color: var(--muted); font-size: 12px; }
 input {
-  width: 100%;
-  margin-top: 6px;
-  padding: 11px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--panel2);
-  color: var(--text);
-  outline: none;
+  width: 100%; margin-top: 6px; padding: 11px 12px;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--panel2); color: var(--text); outline: none;
 }
-
 button {
-  border: 0;
-  border-radius: 11px;
-  padding: 11px 14px;
-  background: var(--accent);
-  color: #07130d;
-  font-weight: 700;
-  cursor: pointer;
+  border: 0; border-radius: 11px; padding: 12px;
+  background: var(--accent); color: #07130d;
+  font-weight: 700; font-size: 14px; cursor: pointer;
+  touch-action: none; user-select: none;
 }
-
-button.change-wifi {
-  width: 100%;
-  margin-top: 10px;
-  background: #f0b429;
-  color: #161006;
+button:active { filter: brightness(.82); transform: scale(.97); }
+#connect { width: 100%; }
+.change-wifi {
+  width: 100%; margin-top: 9px;
+  background: #f0b429; color: #161006;
 }
-
-button.change-wifi:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-button.stop {
-  background: var(--danger);
-  color: white;
-  width: 100%;
-  margin-top: 14px;
-}
-
-.joystick-wrap {
+.change-wifi:disabled { opacity: .5; }
+.section-title { font-size: 14px; font-weight: 700; margin: 20px 0 12px; }
+.direction-pad {
+  width: min(100%, 330px);
+  margin: 0 auto;
   display: grid;
-  place-items: center;
-  padding: 12px 0 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
-
+.dir {
+  min-height: 76px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
+  background: #252d36; color: var(--text);
+  border: 1px solid #35404c; border-radius: 15px;
+}
+.dir .arrow { font-size: 27px; line-height: 1; }
+.dir small { color: #aab4c0; font-size: 10px; }
+.dir.diagonal { background: #1d2930; }
+.pad-empty { visibility: hidden; }
+.joystick-wrap { display: grid; place-items: center; padding: 8px 0 4px; }
 .joystick {
-  width: min(72vw, 360px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  position: relative;
-  touch-action: none;
-  user-select: none;
-
+  width: min(68vw, 300px); aspect-ratio: 1;
+  border-radius: 50%; position: relative;
+  touch-action: none; user-select: none;
   background:
-    radial-gradient(
-      circle at center,
-      transparent 0 24%,
-      rgba(255,255,255,.035) 24.5% 25%,
-      transparent 25.5% 49%,
-      rgba(255,255,255,.035) 49.5% 50%,
-      transparent 50.5%
-    ),
-    #101419;
-
+    radial-gradient(circle at center,
+      transparent 0 24%, rgba(255,255,255,.06) 24.5% 25%,
+      transparent 25.5% 49%, rgba(255,255,255,.06) 49.5% 50%,
+      transparent 50.5%), #101419;
   border: 1px solid var(--border);
   box-shadow: inset 0 0 50px rgba(0,0,0,.35);
 }
-
 .knob {
-  width: 31%;
-  aspect-ratio: 1;
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%,-50%);
-  border-radius: 50%;
-  background: #eef2f5;
+  width: 31%; aspect-ratio: 1; position: absolute;
+  left: 50%; top: 50%; transform: translate(-50%,-50%);
+  border-radius: 50%; background: #eef2f5;
   box-shadow: 0 8px 28px rgba(0,0,0,.45);
-  transition: transform .05s linear;
 }
-
-.readout {
-  text-align: center;
-  margin-top: 14px;
-}
-
-.command {
-  font: 700 26px ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
-.values {
-  color: var(--muted);
-  font: 13px ui-monospace, monospace;
-  margin-top: 4px;
-}
-
-.note {
-  margin-top: 15px;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
+.readout { text-align: center; margin-top: 12px; }
+.command { font: 700 25px ui-monospace, monospace; }
+.values { color: var(--muted); font: 13px ui-monospace, monospace; margin-top: 4px; }
+.stop { background: var(--danger); color: white; width: 100%; margin-top: 16px; }
+.note { margin-top: 14px; color: var(--muted); font-size: 12px; line-height: 1.6; }
 @media (max-width: 560px) {
-
-  .settings {
-    grid-template-columns: 1fr;
-  }
-
-  body {
-    padding: 12px;
-  }
-
+  .settings { grid-template-columns: 1fr; }
+  body { padding: 10px; }
+  .panel { padding: 14px; }
+  .dir { min-height: 68px; }
 }
-
 </style>
 </head>
 
 <body>
-
 <main class="app">
 
 <header>
-
   <h1>SUMO Controller</h1>
-
   <div class="status">
     <span id="dot" class="dot"></span>
     <span id="status">Disconnected</span>
   </div>
-
 </header>
-
 
 <section class="panel">
 
-
-  <!-- ============================================== -->
-  <!-- MQTT SETTINGS -->
-  <!-- ============================================== -->
-
   <div class="settings">
-
     <div>
-
       <label>EMQX WebSocket</label>
-
-      <input
-        id="broker"
-        value="wss://broker.emqx.io:8084/mqtt"
-      >
-
+      <input id="broker" value="wss://broker.emqx.io:8084/mqtt">
     </div>
-
-
     <div>
-
       <label>MQTT Topic</label>
-
-      <input
-        id="topic"
-        value="robot/sumo/ikhwan_2026"
-      >
-
+      <input id="topic" value="robot/sumo/ikhwan_2026">
     </div>
+  </div>
+
+  <button id="connect">CONNECT MQTT</button>
+  <button id="changeWifi" class="change-wifi">CHANGE WIFI</button>
+
+  <!-- KONTROL TOMBOL -->
+  <div class="section-title">Kontrol Arah</div>
+
+  <div class="direction-pad">
+
+    <button class="dir diagonal" data-x="-180" data-y="180">
+      <span class="arrow">↖</span>
+      <small>Serong kiri depan</small>
+    </button>
+
+    <button class="dir" data-x="0" data-y="255">
+      <span class="arrow">⬆</span>
+      <small>Maju</small>
+    </button>
+
+    <button class="dir diagonal" data-x="180" data-y="180">
+      <span class="arrow">↗</span>
+      <small>Serong kanan depan</small>
+    </button>
+
+    <button class="dir" data-x="-255" data-y="0">
+      <span class="arrow">⬅</span>
+      <small>Putar kiri</small>
+    </button>
+
+    <button class="dir" data-x="0" data-y="0">
+      <span class="arrow">■</span>
+      <small>STOP</small>
+    </button>
+
+    <button class="dir" data-x="255" data-y="0">
+      <span class="arrow">➡</span>
+      <small>Putar kanan</small>
+    </button>
+
+    <button class="dir diagonal" data-x="-180" data-y="-180">
+      <span class="arrow">↙</span>
+      <small>Serong kiri belakang</small>
+    </button>
+
+    <button class="dir" data-x="0" data-y="-255">
+      <span class="arrow">⬇</span>
+      <small>Mundur</small>
+    </button>
+
+    <button class="dir diagonal" data-x="180" data-y="-180">
+      <span class="arrow">↘</span>
+      <small>Serong kanan belakang</small>
+    </button>
 
   </div>
 
-
-  <!-- CONNECT -->
-
-  <button id="connect">
-    Connect
-  </button>
-
-
-  <!-- CHANGE WIFI -->
-
-  <button
-    id="changeWifi"
-    class="change-wifi"
-  >
-    CHANGE WIFI
-  </button>
-
-
-  <!-- ============================================== -->
   <!-- JOYSTICK -->
-  <!-- ============================================== -->
+  <div class="section-title">Kontrol Joystick</div>
 
   <div class="joystick-wrap">
-
-    <div
-      id="joystick"
-      class="joystick"
-    >
-
-      <div
-        id="knob"
-        class="knob"
-      ></div>
-
+    <div id="joystick" class="joystick">
+      <div id="knob" class="knob"></div>
     </div>
-
-
     <div class="readout">
-
-      <div
-        id="command"
-        class="command"
-      >
-        S
-      </div>
-
-      <div
-        id="values"
-        class="values"
-      >
-        X: 0 &nbsp; Y: 0
-      </div>
-
+      <div id="command" class="command">STOP</div>
+      <div id="values" class="values">X: 0 | Y: 0</div>
     </div>
-
   </div>
 
-
-  <!-- STOP -->
-
-  <button
-    id="stop"
-    class="stop"
-  >
-    STOP
-  </button>
-
+  <button id="stop" class="stop">STOP ROBOT</button>
 
   <div class="note">
-
-    Geser joystick untuk mengontrol robot.
-    Tengah = stop, atas = maju,
-    bawah = mundur, kiri/kanan = putar.
-
-    Nilai dikirim sebagai X,Y dari -255 sampai 255.
-
+    Tahan tombol arah untuk bergerak dan lepaskan untuk berhenti.
+    Tombol diagonal menggerakkan kedua motor dengan kecepatan berbeda.
+    Joystick juga bisa digunakan seperti biasa.
     <br><br>
-
-    <b>CHANGE WIFI:</b>
-    ESP32 akan masuk mode konfigurasi WiFi.
-    Setelah itu sambungkan perangkat ke
-    <b>SUMO-ESP32-S3</b> dan buka
+    <b>CHANGE WIFI:</b> ESP32 masuk mode konfigurasi WiFi.
+    Sambungkan perangkat ke SUMO-ESP32-S3 lalu buka
     <b>192.168.4.1</b>.
-
   </div>
 
 </section>
-
 </main>
 
-
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-
 <script>
+const $ = id => document.getElementById(id);
 
-
-// =====================================================
-// ELEMENT
-// =====================================================
-
-const joystick =
-  document.getElementById("joystick");
-
-const knob =
-  document.getElementById("knob");
-
-const commandEl =
-  document.getElementById("command");
-
-const valuesEl =
-  document.getElementById("values");
-
-const statusEl =
-  document.getElementById("status");
-
-const dot =
-  document.getElementById("dot");
-
-const connectBtn =
-  document.getElementById("connect");
-
-const stopBtn =
-  document.getElementById("stop");
-
-const changeWifiBtn =
-  document.getElementById("changeWifi");
-
-
-// =====================================================
-// MQTT
-// =====================================================
+const joystick = $("joystick");
+const knob = $("knob");
+const commandEl = $("command");
+const valuesEl = $("values");
+const statusEl = $("status");
+const dot = $("dot");
+const connectBtn = $("connect");
+const stopBtn = $("stop");
+const changeWifiBtn = $("changeWifi");
 
 let client = null;
-
 let active = false;
-
+let activeDirection = null;
 let lastSent = 0;
-
 let lastPayload = "";
+let wifiChanging = false;
 
 const SEND_INTERVAL = 35;
 
-
-// =====================================================
-// STATUS
-// =====================================================
-
 function setStatus(ok, text) {
-
   dot.classList.toggle("ok", ok);
-
   statusEl.textContent = text;
-
 }
-
-
-// =====================================================
-// CONNECT MQTT
-// =====================================================
 
 function connectMQTT() {
-
   if (typeof mqtt === "undefined") {
-
-    setStatus(
-      false,
-      "mqtt.js gagal dimuat"
-    );
-
+    setStatus(false, "mqtt.js gagal dimuat");
     return;
   }
 
+  if (client) client.end(true);
 
-  if (client)
-    client.end(true);
-
-
-  const url =
-    document
-      .getElementById("broker")
-      .value
-      .trim();
-
+  const url = $("broker").value.trim();
 
   client = mqtt.connect(url, {
-
-    clientId:
-      "sumo_web_" +
-      Math.random()
-        .toString(16)
-        .slice(2),
-
+    clientId: "sumo_web_" + Math.random().toString(16).slice(2),
     clean: true,
-
     connectTimeout: 5000,
-
     reconnectPeriod: 2000
-
   });
 
-
-  setStatus(
-    false,
-    "Connecting..."
-  );
-
+  setStatus(false, "Connecting...");
 
   client.on("connect", () => {
-
-    setStatus(
-      true,
-      "Connected"
-    );
-
+    setStatus(true, "Connected");
   });
 
-
-  client.on("reconnect", () => {
-
-    setStatus(
-      false,
-      "Reconnecting..."
-    );
-
-  });
-
-
-  client.on("offline", () => {
-
-    setStatus(
-      false,
-      "Offline"
-    );
-
-  });
-
-
-  client.on("error", err => {
-
-    setStatus(
-      false,
-      "MQTT error"
-    );
-
-  });
-
+  client.on("reconnect", () => setStatus(false, "Reconnecting..."));
+  client.on("offline", () => setStatus(false, "Offline"));
+  client.on("error", () => setStatus(false, "MQTT error"));
 }
 
+function publish(x, y, force = false) {
+  if (!client || !client.connected || wifiChanging) return;
 
-// =====================================================
-// PUBLISH JOYSTICK
-// =====================================================
+  x = Math.max(-255, Math.min(255, Math.round(x)));
+  y = Math.max(-255, Math.min(255, Math.round(y)));
 
-function publish(
-  x,
-  y,
-  force = false
-) {
+  const payload = `${x},${y}`;
+  const now = performance.now();
 
-  if (
-    !client ||
-    !client.connected
-  )
-    return;
+  if (!force && payload === lastPayload &&
+      now - lastSent < SEND_INTERVAL) return;
 
+  if (!force && now - lastSent < SEND_INTERVAL) return;
 
-  x =
-    Math.max(
-      -255,
-      Math.min(
-        255,
-        Math.round(x)
-      )
-    );
-
-
-  y =
-    Math.max(
-      -255,
-      Math.min(
-        255,
-        Math.round(y)
-      )
-    );
-
-
-  const payload =
-    `${x},${y}`;
-
-
-  const now =
-    performance.now();
-
-
-  if (
-    !force &&
-    payload === lastPayload &&
-    now - lastSent < SEND_INTERVAL
-  )
-    return;
-
-
-  if (
-    !force &&
-    now - lastSent < SEND_INTERVAL
-  )
-    return;
-
-
-  client.publish(
-
-    document
-      .getElementById("topic")
-      .value
-      .trim(),
-
-    payload,
-
-    {
-      qos: 0,
-      retain: false
-    }
-
-  );
-
+  client.publish($("topic").value.trim(), payload, {
+    qos: 0,
+    retain: false
+  });
 
   lastPayload = payload;
-
   lastSent = now;
 
-
-  updateReadout(
-    x,
-    y
-  );
-
+  updateReadout(x, y);
 }
 
+function updateReadout(x, y) {
+  let c = "STOP";
 
-// =====================================================
-// CHANGE WIFI
-// =====================================================
+  if (x === 0 && y === 0) c = "STOP";
+  else if (x === 0 && y > 0) c = "MAJU";
+  else if (x === 0 && y < 0) c = "MUNDUR";
+  else if (x < 0 && y === 0) c = "KIRI";
+  else if (x > 0 && y === 0) c = "KANAN";
+  else if (x < 0 && y > 0) c = "SERONG KIRI DEPAN";
+  else if (x > 0 && y > 0) c = "SERONG KANAN DEPAN";
+  else if (x < 0 && y < 0) c = "SERONG KIRI BELAKANG";
+  else if (x > 0 && y < 0) c = "SERONG KANAN BELAKANG";
 
-function changeWiFi() {
-
-  if (
-    !client ||
-    !client.connected
-  ) {
-
-    alert(
-      "MQTT belum terhubung."
-    );
-
-    return;
-  }
-
-
-  const confirmed =
-    confirm(
-
-      "ESP32 akan masuk mode konfigurasi WiFi.\n\n" +
-
-      "Robot akan berhenti dan koneksi MQTT akan terputus.\n\n" +
-
-      "Setelah itu sambungkan HP/laptop ke WiFi " +
-      "SUMO-ESP32-S3 lalu buka 192.168.4.1.\n\n" +
-
-      "Lanjutkan?"
-
-    );
-
-
-  if (!confirmed)
-    return;
-
-
-  // Stop robot
-  publish(
-    0,
-    0,
-    true
-  );
-
-
-  // Kirim command WiFi
-  client.publish(
-
-    document
-      .getElementById("topic")
-      .value
-      .trim(),
-
-    "WIFI_CONFIG",
-
-    {
-      qos: 0,
-      retain: false
-    }
-
-  );
-
-
-  setStatus(
-    false,
-    "Starting WiFi config..."
-  );
-
-
-  changeWifiBtn.disabled = true;
-
-  changeWifiBtn.textContent =
-    "WIFI CONFIG STARTING...";
-
-
-  // MQTT akan disconnect karena ESP
-  // pindah ke AP mode
-
-
-  setTimeout(() => {
-
-    changeWifiBtn.disabled = false;
-
-    changeWifiBtn.textContent =
-      "CHANGE WIFI";
-
-  }, 5000);
-
+  commandEl.textContent = c;
+  valuesEl.textContent = `X: ${x} | Y: ${y}`;
 }
-
-
-// =====================================================
-// READOUT
-// =====================================================
-
-function updateReadout(
-  x,
-  y
-) {
-
-  const ax =
-    Math.abs(x);
-
-  const ay =
-    Math.abs(y);
-
-  let c = "S";
-
-
-  if (
-    ay < 8 &&
-    ax < 8
-  )
-
-    c = "S";
-
-
-  else if (
-    y >= 0 &&
-    x > 8
-  )
-
-    c = "FR";
-
-
-  else if (
-    y >= 0 &&
-    x < -8
-  )
-
-    c = "FL";
-
-
-  else if (
-    y < 0 &&
-    x > 8
-  )
-
-    c = "BR";
-
-
-  else if (
-    y < 0 &&
-    x < -8
-  )
-
-    c = "BL";
-
-
-  else if (
-    y >= 0
-  )
-
-    c = "F";
-
-
-  else if (
-    y < 0
-  )
-
-    c = "B";
-
-
-  else if (
-    x > 0
-  )
-
-    c = "R";
-
-
-  else
-
-    c = "L";
-
-
-  const intensity =
-    Math.round(
-      Math.min(
-        255,
-        Math.hypot(
-          x,
-          y
-        )
-      )
-    );
-
-
-  commandEl.textContent =
-    c + intensity;
-
-
-  valuesEl.textContent =
-    `X: ${x}   Y: ${y}`;
-
-}
-
-
-// =====================================================
-// RESET JOYSTICK
-// =====================================================
 
 function resetJoystick() {
-
-  knob.style.transform =
-    "translate(-50%, -50%)";
-
-
   active = false;
-
-
-  publish(
-    0,
-    0,
-    true
-  );
-
-
-  updateReadout(
-    0,
-    0
-  );
-
+  knob.style.transform = "translate(-50%, -50%)";
+  publish(0, 0, true);
+  updateReadout(0, 0);
 }
 
+function moveJoystick(clientX, clientY) {
+  const r = joystick.getBoundingClientRect();
+  const cx = r.left + r.width / 2;
+  const cy = r.top + r.height / 2;
 
-// =====================================================
-// MOVE JOYSTICK
-// =====================================================
+  let dx = clientX - cx;
+  let dy = cy - clientY;
 
-function moveJoystick(
-  clientX,
-  clientY
-) {
+  const max = r.width / 2;
+  const dist = Math.hypot(dx, dy);
 
-  const r =
-    joystick.getBoundingClientRect();
-
-
-  const cx =
-    r.left +
-    r.width / 2;
-
-
-  const cy =
-    r.top +
-    r.height / 2;
-
-
-  let dx =
-    clientX - cx;
-
-
-  let dy =
-    cy - clientY;
-
-
-  const max =
-    r.width / 2;
-
-
-  const dist =
-    Math.hypot(
-      dx,
-      dy
-    );
-
-
-  if (
-    dist > max
-  ) {
-
-    dx =
-      dx / dist * max;
-
-    dy =
-      dy / dist * max;
-
+  if (dist > max) {
+    dx = dx / dist * max;
+    dy = dy / dist * max;
   }
-
 
   knob.style.transform =
-
-    `translate(calc(-50% + ${dx}px), ` +
-    `calc(-50% - ${dy}px))`;
-
-
-  const x =
-    Math.round(
-      (dx / max) * 255
-    );
-
-
-  const y =
-    Math.round(
-      (dy / max) * 255
-    );
-
+    `translate(calc(-50% + ${dx}px), calc(-50% - ${dy}px))`;
 
   publish(
-    x,
-    y
+    Math.round(dx / max * 255),
+    Math.round(dy / max * 255)
   );
-
 }
 
+// Tombol arah: tekan untuk bergerak
+document.querySelectorAll(".dir").forEach(btn => {
+  btn.addEventListener("pointerdown", e => {
+    e.preventDefault();
 
-// =====================================================
-// JOYSTICK EVENTS
-// =====================================================
+    if (wifiChanging) return;
 
-joystick.addEventListener(
-  "pointerdown",
-  e => {
+    // Hentikan joystick jika sedang dipakai
+    active = false;
+    knob.style.transform = "translate(-50%, -50%)";
 
-    active = true;
+    activeDirection = btn;
+    btn.setPointerCapture(e.pointerId);
 
-    joystick.setPointerCapture(
-      e.pointerId
+    publish(
+      Number(btn.dataset.x),
+      Number(btn.dataset.y),
+      true
     );
+  });
 
-    moveJoystick(
-      e.clientX,
-      e.clientY
-    );
+  function releaseDirection() {
+    if (activeDirection !== btn) return;
 
+    activeDirection = null;
+    publish(0, 0, true);
+    updateReadout(0, 0);
   }
-);
 
+  btn.addEventListener("pointerup", releaseDirection);
+  btn.addEventListener("pointercancel", releaseDirection);
+  btn.addEventListener("lostpointercapture", releaseDirection);
+});
 
-joystick.addEventListener(
-  "pointermove",
-  e => {
+// Joystick
+joystick.addEventListener("pointerdown", e => {
+  if (wifiChanging) return;
 
-    if (active)
-
-      moveJoystick(
-        e.clientX,
-        e.clientY
-      );
-
+  if (activeDirection) {
+    activeDirection = null;
+    publish(0, 0, true);
   }
-);
 
+  active = true;
+  joystick.setPointerCapture(e.pointerId);
+  moveJoystick(e.clientX, e.clientY);
+});
 
-joystick.addEventListener(
-  "pointerup",
-  resetJoystick
-);
+joystick.addEventListener("pointermove", e => {
+  if (active) moveJoystick(e.clientX, e.clientY);
+});
 
+joystick.addEventListener("pointerup", resetJoystick);
+joystick.addEventListener("pointercancel", resetJoystick);
 
-joystick.addEventListener(
-  "pointercancel",
-  resetJoystick
-);
+function stopRobot() {
+  active = false;
+  activeDirection = null;
+  knob.style.transform = "translate(-50%, -50%)";
+  publish(0, 0, true);
+  updateReadout(0, 0);
+}
 
+stopBtn.addEventListener("click", stopRobot);
 
-// =====================================================
-// BUTTON
-// =====================================================
+// Change WiFi via MQTT
+function changeWiFi() {
+  if (!client || !client.connected) {
+    alert("MQTT belum terhubung.");
+    return;
+  }
 
-stopBtn.addEventListener(
-  "click",
-  resetJoystick
-);
+  if (!confirm(
+    "ESP32 akan masuk mode konfigurasi WiFi dan koneksi MQTT terputus. Lanjutkan?"
+  )) return;
 
+  stopRobot();
 
-connectBtn.addEventListener(
-  "click",
-  connectMQTT
-);
+  wifiChanging = true;
+  changeWifiBtn.disabled = true;
+  changeWifiBtn.textContent = "MEMBUKA KONFIGURASI...";
+  setStatus(false, "WiFi config requested");
 
+  // Kirim command setelah command STOP
+  client.publish(
+    $("topic").value.trim(),
+    "WIFI_CONFIG",
+    { qos: 0, retain: false },
+    err => {
+      if (err) {
+        wifiChanging = false;
+        changeWifiBtn.disabled = false;
+        changeWifiBtn.textContent = "CHANGE WIFI";
+        setStatus(false, "Publish failed");
+        alert("Perintah gagal dikirim.");
+      }
+    }
+  );
 
-changeWifiBtn.addEventListener(
-  "click",
-  changeWiFi
-);
+  setTimeout(() => {
+    changeWifiBtn.disabled = false;
+    changeWifiBtn.textContent = "CHANGE WIFI";
+    wifiChanging = false;
+  }, 15000);
+}
 
+changeWifiBtn.addEventListener("click", changeWiFi);
+connectBtn.addEventListener("click", connectMQTT);
 
-// =====================================================
-// INITIAL
-// =====================================================
-
-updateReadout(
-  0,
-  0
-);
-
+updateReadout(0, 0);
 </script>
-
 </body>
 </html>
